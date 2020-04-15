@@ -1,0 +1,7 @@
+pluginManagement {
+    repositories {
+        maven { url "http://dc1udtlhart02.stack.qadev.corp:8081/artifactory/repositories" }
+    }
+}
+rootProject.name = 'library-events-consumer'
+
