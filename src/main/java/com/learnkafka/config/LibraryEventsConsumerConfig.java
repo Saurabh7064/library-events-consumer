@@ -1,6 +1,9 @@
 package com.learnkafka.config;
 
+import com.learnkafka.service.LibraryEventsService;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.kafka.ConcurrentKafkaListenerContainerFactoryConfigurer;
 import org.springframework.context.annotation.Bean;
@@ -23,6 +26,9 @@ import java.util.Map;
 @Slf4j
 public class LibraryEventsConsumerConfig {
 
+    @Autowired
+    LibraryEventsService libraryEventsService;
+
     @Bean
     ConcurrentKafkaListenerContainerFactory<?, ?> kafkaListenerContainerFactory(
             ConcurrentKafkaListenerContainerFactoryConfigurer configurer,
@@ -36,16 +42,26 @@ public class LibraryEventsConsumerConfig {
             //persist
         }));
         factory.setRetryTemplate(retryTemplate());
-        factory.setRecoveryCallback(context -> {
-            if (context.getLastThrowable().getCause() instanceof RecoverableDataAccessException){
+        factory.setRecoveryCallback((context -> {
+            if(context.getLastThrowable().getCause() instanceof RecoverableDataAccessException){
+                //invoke recovery logic
                 log.info("Inside the recoverable logic");
+               /* Arrays.asList(context.attributeNames())
+                        .forEach(attributeName -> {
+                            log.info("Attribute name is : {} ", attributeName);
+                            log.info("Attribute Value is : {} ", context.getAttribute(attributeName));
+                        });*/
+
+                ConsumerRecord<Integer, String> consumerRecord = (ConsumerRecord<Integer, String>) context.getAttribute("record");
+                libraryEventsService.handleRecovery(consumerRecord);
             }else{
                 log.info("Inside the non recoverable logic");
                 throw new RuntimeException(context.getLastThrowable().getMessage());
             }
 
+
             return null;
-        });
+        }));
         return factory;
     }
 
